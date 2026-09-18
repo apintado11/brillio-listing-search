@@ -46,23 +46,53 @@ API: `http://localhost:3001` (Node) or `http://localhost:3002` (Python)
 - `GET /api/cities` — unique city names for the lookup
 - Other methods on `/api/listings` and `/api/cities` — 405
 
-`GET /api/listings` query params: `targetBudget` (required, > 0), `minPrice`, `maxPrice`, `minBedrooms`, `city`, `keyword` (description substring), `page` (default 1), `pageSize` (default 5, max 50).
+`GET /api/listings` query params: `targetBudget` (required, > 0), `minPrice`, `maxPrice`, `minBedrooms`, `city`, `keyword` (description substring), `page` (default 1), `pageSize` (default 5, max 50), `sort` (default `match`; also `priceAsc`, `priceDesc`, `newest`, `bedsDesc`).
 
 Bad input (for example `minPrice > maxPrice`, `pageSize <= 0`, negatives) returns **400** with `{ error, details }`. A valid query with no rows (unknown city, page past the last page) returns **200** with `results: []` and `total: 0`. Optional `LISTINGS_FILE` and `PORT` env vars override the data path and port.
 
 ### Scoring
 
-There is no single correct formula. This one is a weighted blend so it is easy to change in the interview:
+The handout does not give a formula. This one is two report cards, then a weighted average. The UI shows that average as **Match %**.
 
-- `budgetFit = 1 - min(|price - targetBudget| / targetBudget, 1)` — 1.0 when price equals budget, 0 when 100%+ away
-- `recencyFit = 1 - (daysSinceListed / maxDaysSinceListedInTheFilteredSet)` — newest among current matches is 1.0, oldest is 0
-- `score = round(0.7 * budgetFit + 0.3 * recencyFit, 4)`
+**1. Price vs budget (70% of the score)**
 
-Ties: newer `listedDate` first, then `source+id` so pagination is stable.
+How far is the list price from the number the user typed?
 
-Trade-off: budget is the user's intent; recency is a smaller second signal. Weights are explicit on purpose.
+- Same as budget → 100
+- 50% away (for example $675k when the budget is $450k) → 50
+- Twice the budget or more, or half or less → 0 (we cap it so a $2M home is not “more than 0% worse” than a $900k home)
 
-Identity for a listing is `source + id` (the handout says `id` is only unique per feed).
+Worked example, budget **$450,000**:
+
+| List price | How far off | Price score |
+| --- | --- | --- |
+| $450,000 | $0 / $450,000 = 0% | 100 |
+| $540,000 | $90,000 / $450,000 = 20% | 80 |
+| $900,000 | $450,000 / $450,000 = 100% | 0 |
+
+**2. How new it is (30% of the score)**
+
+Only among the homes that already passed the filters, not the whole MLS file.
+
+- Newest in that list → 100
+- Oldest in that list → 0
+- Everything else is in between
+
+If the search returns **one** home, it is both newest and oldest, so this piece is 0 (unless it listed today). That is why a lone Chantilly match can show **0%** when the price is also far from budget: both pieces are 0.
+
+**3. Blend**
+
+```
+Match % = 70% × price score + 30% × newness score
+```
+
+Example: price score 80, newest in the list → `0.7 × 80 + 0.3 × 100 = 86`.
+
+Budget is the bigger weight because that is what the user typed. Recency is a tie-breaker so a $451k listing from yesterday beats a $451k listing from last month.
+
+If two scores are equal, newer `listedDate` wins, then `source+id` so page 2 does not shuffle. A listing’s identity is `source + id` because `id` is only unique inside one MLS feed.
+
+Price **range** (min/max) is not scoring. It hides homes. Budget only reorders the ones that are left. Default sort is this match score; the Sort control can ignore it and order by price, date, or beds instead. The badge still shows the match number.
 
 ## Tests
 
