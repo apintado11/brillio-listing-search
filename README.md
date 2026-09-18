@@ -52,47 +52,103 @@ Bad input (for example `minPrice > maxPrice`, `pageSize <= 0`, negatives) return
 
 ### Scoring
 
-The handout does not give a formula. This one is two report cards, then a weighted average. The UI shows that average as **Match %**.
+The handout does not give a formula. Think of two stickers on a fridge, then mix them.
 
-**1. Price vs budget (70% of the score)**
+- **Price sticker (worth 70% of the final grade):** how close is the house price to the budget you typed?
+- **Newness sticker (worth 30%):** among the houses that already survived your filters, is this one the newest or the oldest?
 
-How far is the list price from the number the user typed?
+The UI badge is those two stickers mixed. It does **not** hide homes. Price range hides homes. Budget only reorders what is left.
 
-- Same as budget → 100
-- 50% away (for example $675k when the budget is $450k) → 50
-- Twice the budget or more, or half or less → 0 (we cap it so a $2M home is not “more than 0% worse” than a $900k home)
+#### Every number in `0.7 × 80 + 0.3 × 100 = 86`
 
-Worked example, budget **$450,000**:
+Story: you typed budget **$450,000**. This house costs **$540,000**. It is the **newest** house still in the list.
 
-| List price | How far off | Price score |
+```
+1. Gap in dollars
+   $540,000 − $450,000 = $90,000 off
+
+2. Gap as a share of budget
+   $90,000 ÷ $450,000 = 0.20  →  “20% off”
+
+3. Price sticker (out of 100)
+   100 − 20 = 80
+   Perfect price would be 100. 100% off (or worse) is 0.
+   So 80 means “pretty close, not perfect.”
+
+4. Newness sticker (out of 100)
+   newest in this result list = 100
+   oldest in this result list = 0
+   This house is newest, so 100.
+
+5. Mix (this is the 0.7 and 0.3)
+   0.7 means “price counts 70%.”
+   0.3 means “newness counts 30%.”
+   Those two numbers are ours. They are not in the listing JSON.
+   0.7 × 80 = 56   ← seventy percent of the 80
+   0.3 × 100 = 30  ← thirty percent of the 100
+   56 + 30 = 86    ← Match %
+
+6. What the API actually stores
+   Code uses 0–1, not 0–100.
+   price sticker 80  →  0.80
+   newness sticker 100 →  1.00
+   score = 0.7 × 0.80 + 0.3 × 1.00 = 0.86
+   The card prints Math.round(0.86 × 100) + "%"  →  "86%"
+```
+
+Other price stickers with the same $450,000 budget:
+
+| List price | Dollar gap | Gap ÷ budget | Price sticker |
+| --- | --- | --- | --- |
+| $450,000 | $0 | 0% | 100 |
+| $540,000 | $90,000 | 20% | 80 |
+| $675,000 | $225,000 | 50% | 50 |
+| $900,000 | $450,000 | 100% | 0 |
+
+We cap at 0 so a $2M house is not “more than 0% worse” than a $900k house.
+
+If the search returns **one** house, that house is both newest and oldest, so the newness sticker is 0 (unless it listed today). If its price is also far from budget, both stickers are 0 and the badge shows **0%**. That is the lone Chantilly + $250k budget case.
+
+If two mixed scores are equal, newer `listedDate` wins, then `source+id` so page 2 does not shuffle. Identity is `source + id` because `id` is only unique inside one MLS feed.
+
+Default sort is this match number. Sort by price / newest / beds ignores it for order, but the badge still uses it.
+
+#### Where the math runs (not in the UI)
+
+The form does **not** compute Match %. It only sends the budget. The controller does **not** compute it either. The service does.
+
+```
+You type Budget $450,000
+  → frontend form (query only)
+  → frontend/src/api/listings.ts
+     GET /api/listings?targetBudget=450000&page=1&pageSize=5&sort=match
+  → Vite proxy
+     Node  /api     → :3001
+     Python /python → :3002
+  → route  GET /api/listings
+  → validator  “is this query legal?”  (no math)
+  → controller  listingsController.search
+       1. repository.getAll()  read sample_listings.json
+       2. call the service
+  → service  searchListings   filter → score → sort → paginate
+  → scoring.js / scoring.py   this is the 0.7 / 0.80 / 0.86 math
+       each home gets  score: 0.86
+  → JSON back to the browser
+  → ListingCard  formatScore(0.86)  →  "86%"
+```
+
+Same pipeline on Python: `backend-python/src/services/search_service.py` and `scoring.py`.
+
+| Layer | File | Job |
 | --- | --- | --- |
-| $450,000 | $0 / $450,000 = 0% | 100 |
-| $540,000 | $90,000 / $450,000 = 20% | 80 |
-| $900,000 | $450,000 / $450,000 = 100% | 0 |
-
-**2. How new it is (30% of the score)**
-
-Only among the homes that already passed the filters, not the whole MLS file.
-
-- Newest in that list → 100
-- Oldest in that list → 0
-- Everything else is in between
-
-If the search returns **one** home, it is both newest and oldest, so this piece is 0 (unless it listed today). That is why a lone Chantilly match can show **0%** when the price is also far from budget: both pieces are 0.
-
-**3. Blend**
-
-```
-Match % = 70% × price score + 30% × newness score
-```
-
-Example: price score 80, newest in the list → `0.7 × 80 + 0.3 × 100 = 86`.
-
-Budget is the bigger weight because that is what the user typed. Recency is a tie-breaker so a $451k listing from yesterday beats a $451k listing from last month.
-
-If two scores are equal, newer `listedDate` wins, then `source+id` so page 2 does not shuffle. A listing’s identity is `source + id` because `id` is only unique inside one MLS feed.
-
-Price **range** (min/max) is not scoring. It hides homes. Budget only reorders the ones that are left. Default sort is this match score; the Sort control can ignore it and order by price, date, or beds instead. The badge still shows the match number.
+| UI form | `frontend/src/components/SearchPanel.tsx` | Collect budget / filters. No score math. |
+| API client | `frontend/src/api/listings.ts` | Put numbers on the URL. |
+| Route | `backend/src/routes/index.js` | Map `GET /api/listings` to search. |
+| Validator | `backend/src/validators/searchQuery.js` | 400 vs ok. No score math. |
+| Controller | `backend/src/controllers/listingsController.js` | Load file, call service, send JSON. |
+| Service | `backend/src/services/searchService.js` | Filter, then score, then sort, then paginate. |
+| Scoring | `backend/src/services/scoring.js` | The 70/30 mix. |
+| Display | `frontend/src/format.ts` `formatScore` | `0.86` → `86%`. |
 
 ## Tests
 
