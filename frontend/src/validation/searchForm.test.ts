@@ -8,6 +8,7 @@ describe('validateSearchForm', () => {
     if (result.ok) {
       expect(result.params.targetBudget).toBe(450000);
       expect(result.params.pageSize).toBe(5);
+      expect(result.params.sort).toBe('match');
     }
   });
 
@@ -34,6 +35,14 @@ describe('validateSearchForm', () => {
   it('rejects a pageSize of zero', () => {
     const result = validateSearchForm({ ...emptyForm, pageSize: '0' });
     expect(result.ok).toBe(false);
+  });
+
+  it('rejects an unknown sort', () => {
+    const result = validateSearchForm({ ...emptyForm, sort: 'popularity' });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errors.sort).toMatch(/valid sort/i);
+    }
   });
 
   it('parses currency formatting', () => {

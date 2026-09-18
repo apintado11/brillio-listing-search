@@ -36,10 +36,32 @@ function paginate(items, page, pageSize) {
   return { results, page, pageSize, total, totalPages };
 }
 
+function sortListings(listings, sort = 'match') {
+  if (sort === 'match') {
+    return sortByScore(listings);
+  }
+  return [...listings].sort((a, b) => {
+    let cmp = 0;
+    if (sort === 'priceAsc') {
+      cmp = a.price - b.price;
+    } else if (sort === 'priceDesc') {
+      cmp = b.price - a.price;
+    } else if (sort === 'newest') {
+      cmp = String(b.listedDate || '').localeCompare(String(a.listedDate || ''));
+    } else if (sort === 'bedsDesc') {
+      cmp = (b.bedrooms || 0) - (a.bedrooms || 0);
+    }
+    if (cmp !== 0) {
+      return cmp;
+    }
+    return `${a.source}+${a.id}`.localeCompare(`${b.source}+${b.id}`);
+  });
+}
+
 function searchListings(listings, query, now = new Date()) {
   const filtered = filterListings(listings, query);
   const scored = scoreListings(filtered, query.targetBudget, now);
-  const ranked = sortByScore(scored);
+  const ranked = sortListings(scored, query.sort || 'match');
   return paginate(ranked, query.page, query.pageSize);
 }
 
@@ -85,6 +107,7 @@ module.exports = {
   filterListings,
   paginate,
   searchListings,
+  sortListings,
   toPublicListing,
   uniqueCities,
 };

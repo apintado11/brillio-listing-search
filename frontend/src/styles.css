@@ -70,7 +70,7 @@ a {
 
 .site-header__inner {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: 1rem;
   max-width: 1120px;
@@ -102,6 +102,28 @@ a {
   font-size: 0.85rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
+}
+
+.engine-switch {
+  display: inline-flex;
+  border: 1px solid #3a4450;
+  overflow: hidden;
+}
+
+.engine-switch__btn {
+  border: 0;
+  background: transparent;
+  color: #c8c2b8;
+  padding: 0.28rem 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.engine-switch__btn--active {
+  background: var(--coral);
+  color: #fff;
 }
 
 .hero {
@@ -346,7 +368,7 @@ a {
 .btn:focus-visible,
 .listing-card:focus-visible,
 .pagination__page:focus-visible,
-.page-size select:focus {
+.toolbar-control select:focus {
   outline: 2px solid var(--navy);
   outline-offset: 1px;
 }
@@ -421,6 +443,7 @@ a {
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
+  flex-wrap: wrap;
   gap: 1rem;
   margin-bottom: 0.75rem;
 }
@@ -456,7 +479,15 @@ a {
   min-width: 0;
 }
 
-.page-size {
+.results__tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.65rem 0.9rem;
+}
+
+.toolbar-control {
   display: flex;
   align-items: center;
   gap: 0.4rem;
@@ -464,10 +495,11 @@ a {
   font-size: 0.82rem;
 }
 
-.page-size select {
+.toolbar-control select {
   border: 1px solid var(--line);
   background: #fff;
   padding: 0.3rem 0.4rem;
+  max-width: 11.5rem;
 }
 
 .listing-grid {

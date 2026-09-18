@@ -165,6 +165,39 @@ describe('searchListings', () => {
     assert.equal(result.total, 0);
     assert.equal(result.totalPages, 0);
   });
+
+  it('sorts by price, listed date, or bedrooms when requested', () => {
+    const byPrice = searchListings(
+      listings,
+      { ...baseQuery, sort: 'priceAsc', pageSize: 4 },
+      NOW,
+    );
+    assert.deepEqual(
+      byPrice.results.map((row) => row.id),
+      ['A2', 'A1', 'A4', 'A3'],
+    );
+
+    const byNewest = searchListings(
+      listings,
+      { ...baseQuery, sort: 'newest', pageSize: 4 },
+      NOW,
+    );
+    assert.deepEqual(
+      byNewest.results.map((row) => row.id),
+      ['A1', 'A3', 'A4', 'A2'],
+    );
+
+    const byBeds = searchListings(
+      listings,
+      { ...baseQuery, sort: 'bedsDesc', pageSize: 4 },
+      NOW,
+    );
+    assert.deepEqual(
+      byBeds.results.map((row) => row.id),
+      ['A3', 'A4', 'A1', 'A2'],
+    );
+    assert.equal(typeof byBeds.results[0].score, 'number');
+  });
 });
 
 describe('uniqueCities', () => {

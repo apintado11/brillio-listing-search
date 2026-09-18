@@ -1,4 +1,4 @@
-import type { SearchFormValues, SearchParams } from '../types';
+import { SORTS, type SearchFormValues, type SearchParams, type SortOption } from '../types';
 
 export const MAX_PAGE_SIZE = 50;
 export const MAX_TEXT_LENGTH = 80;
@@ -104,6 +104,11 @@ export function validateSearchForm(values: SearchFormValues): {
     errors.pageSize = `Results per page must be at most ${MAX_PAGE_SIZE}.`;
   }
 
+  const sort = values.sort.trim();
+  if (!SORTS.includes(sort as SortOption)) {
+    errors.sort = 'Choose a valid sort.';
+  }
+
   if (Object.keys(errors).length > 0) {
     return { ok: false, errors };
   }
@@ -118,6 +123,7 @@ export function validateSearchForm(values: SearchFormValues): {
       city: city || undefined,
       keyword: keyword || undefined,
       pageSize: pageSize as number,
+      sort: sort as SortOption,
     },
   };
 }
@@ -130,4 +136,5 @@ export const emptyForm: SearchFormValues = {
   city: '',
   keyword: '',
   pageSize: String(DEFAULT_PAGE_SIZE),
+  sort: 'match',
 };

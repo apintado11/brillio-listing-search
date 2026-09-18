@@ -1,4 +1,5 @@
-import type { SearchParams, SearchResponse } from '../types';
+import type { BackendEngine, SearchParams, SearchResponse } from '../types';
+import { apiPrefix } from '../types';
 
 export class ApiError extends Error {
   status: number;
@@ -17,6 +18,7 @@ function buildQuery(params: SearchParams): string {
   query.set('targetBudget', String(params.targetBudget));
   query.set('page', String(params.page));
   query.set('pageSize', String(params.pageSize));
+  query.set('sort', params.sort);
   if (params.minPrice !== undefined) {
     query.set('minPrice', String(params.minPrice));
   }
@@ -35,8 +37,11 @@ function buildQuery(params: SearchParams): string {
   return query.toString();
 }
 
-export async function fetchCities(signal?: AbortSignal): Promise<string[]> {
-  const response = await fetch('/api/cities', {
+export async function fetchCities(
+  engine: BackendEngine,
+  signal?: AbortSignal,
+): Promise<string[]> {
+  const response = await fetch(`${apiPrefix(engine)}/api/cities`, {
     signal,
     headers: { Accept: 'application/json' },
   });
@@ -49,12 +54,16 @@ export async function fetchCities(signal?: AbortSignal): Promise<string[]> {
 
 export async function searchListings(
   params: SearchParams,
+  engine: BackendEngine,
   signal?: AbortSignal,
 ): Promise<SearchResponse> {
-  const response = await fetch(`/api/listings?${buildQuery(params)}`, {
-    signal,
-    headers: { Accept: 'application/json' },
-  });
+  const response = await fetch(
+    `${apiPrefix(engine)}/api/listings?${buildQuery(params)}`,
+    {
+      signal,
+      headers: { Accept: 'application/json' },
+    },
+  );
 
   let body: unknown = null;
   try {

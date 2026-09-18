@@ -29,6 +29,16 @@ export type SearchResponse = {
   totalPages: number;
 };
 
+export const SORTS = [
+  'match',
+  'priceAsc',
+  'priceDesc',
+  'newest',
+  'bedsDesc',
+] as const;
+
+export type SortOption = (typeof SORTS)[number];
+
 export type SearchParams = {
   targetBudget: number;
   minPrice?: number;
@@ -38,7 +48,16 @@ export type SearchParams = {
   keyword?: string;
   page: number;
   pageSize: number;
+  sort: SortOption;
 };
+
+export type BackendEngine = 'node' | 'python';
+
+export const ENGINE_STORAGE_KEY = 'northline.engine';
+
+export function apiPrefix(engine: BackendEngine): string {
+  return engine === 'python' ? '/python' : '';
+}
 
 export type SearchFormValues = {
   targetBudget: string;
@@ -48,4 +67,5 @@ export type SearchFormValues = {
   city: string;
   keyword: string;
   pageSize: string;
+  sort: string;
 };

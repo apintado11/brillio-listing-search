@@ -252,6 +252,39 @@ describe('listings HTTP API', () => {
     assert.ok(body.details.includes('minPrice must be at least 0'));
   });
 
+  it('sorts results by price when sort=priceAsc', async () => {
+    const res = await fetch(
+      listingsUrl(ctx.baseUrl, {
+        targetBudget: 450000,
+        pageSize: 20,
+        sort: 'priceAsc',
+      }),
+    );
+    assert.equal(res.status, 200);
+    const body = await res.json();
+    const prices = body.results.map((row) => row.price);
+    assert.deepEqual(
+      prices,
+      [...prices].sort((left, right) => left - right),
+    );
+    for (const row of body.results) {
+      assert.equal(typeof row.score, 'number');
+    }
+  });
+
+  it('returns 400 for an unknown sort', async () => {
+    const res = await fetch(
+      listingsUrl(ctx.baseUrl, { targetBudget: 450000, sort: 'popularity' }),
+    );
+    assert.equal(res.status, 400);
+    const body = await res.json();
+    assert.ok(
+      body.details.includes(
+        'sort must be one of match, priceAsc, priceDesc, newest, bedsDesc',
+      ),
+    );
+  });
+
   it('GET /health returns 503 when the listings file is missing', async () => {
     const missing = await startTestServer(
       path.join(os.tmpdir(), `missing-listings-${Date.now()}.json`),

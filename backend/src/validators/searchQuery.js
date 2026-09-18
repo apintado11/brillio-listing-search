@@ -1,5 +1,6 @@
 const MAX_PAGE_SIZE = 50;
 const MAX_TEXT_LENGTH = 80;
+const SORTS = ['match', 'priceAsc', 'priceDesc', 'newest', 'bedsDesc'];
 
 function isPresent(value) {
   return value !== undefined && value !== null && String(value).trim() !== '';
@@ -62,6 +63,14 @@ function validateSearchQuery(query = {}) {
     ? parseInteger(query.pageSize, 'pageSize', details)
     : 5;
 
+  let sort = 'match';
+  if (isPresent(query.sort)) {
+    sort = String(query.sort).trim();
+    if (!SORTS.includes(sort)) {
+      details.push(`sort must be one of ${SORTS.join(', ')}`);
+    }
+  }
+
   if (minPrice !== undefined && minPrice < 0) {
     details.push('minPrice must be at least 0');
   }
@@ -106,6 +115,7 @@ function validateSearchQuery(query = {}) {
       targetBudget,
       page,
       pageSize,
+      sort,
     },
   };
 }
@@ -113,5 +123,6 @@ function validateSearchQuery(query = {}) {
 module.exports = {
   MAX_PAGE_SIZE,
   MAX_TEXT_LENGTH,
+  SORTS,
   validateSearchQuery,
 };

@@ -9,10 +9,13 @@ import { SiteHeader } from './components/SiteHeader';
 import { formatUsd } from './format';
 import { useListingsSearch } from './hooks/useListingsSearch';
 import {
+  ENGINE_STORAGE_KEY,
   listingKey,
+  type BackendEngine,
   type Listing,
   type SearchFormValues,
   type SearchParams,
+  type SortOption,
 } from './types';
 import {
   emptyForm,
@@ -35,6 +38,23 @@ function sameParams(left: SearchParams | null, right: SearchParams): boolean {
 const initialParams = toParams(emptyForm, 1);
 const FILTER_DELAY_MS = 280;
 
+const SORT_OPTIONS: { value: SortOption; label: string }[] = [
+  { value: 'match', label: 'Best match' },
+  { value: 'priceAsc', label: 'Price: low to high' },
+  { value: 'priceDesc', label: 'Price: high to low' },
+  { value: 'newest', label: 'Newest listed' },
+  { value: 'bedsDesc', label: 'Most bedrooms' },
+];
+
+function readStoredEngine(): BackendEngine {
+  try {
+    const stored = window.sessionStorage.getItem(ENGINE_STORAGE_KEY);
+    return stored === 'python' ? 'python' : 'node';
+  } catch {
+    return 'node';
+  }
+}
+
 export function App() {
   const [values, setValues] = useState<SearchFormValues>(emptyForm);
   const [errors, setErrors] = useState<FieldErrors>({});
@@ -42,15 +62,16 @@ export function App() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [cities, setCities] = useState<string[]>([]);
   const [selected, setSelected] = useState<Listing | null>(null);
+  const [engine, setEngine] = useState<BackendEngine>(readStoredEngine);
   const debounceRef = useRef<number>(0);
   const valuesRef = useRef(values);
   valuesRef.current = values;
 
-  const search = useListingsSearch(applied, refreshKey);
+  const search = useListingsSearch(applied, refreshKey, engine);
 
   useEffect(() => {
     const controller = new AbortController();
-    fetchCities(controller.signal)
+    fetchCities(engine, controller.signal)
       .then(setCities)
       .catch(() => {
         if (!controller.signal.aborted) {
@@ -58,7 +79,7 @@ export function App() {
         }
       });
     return () => controller.abort();
-  }, []);
+  }, [engine]);
 
   useEffect(() => {
     if (search.status !== 'success') {
@@ -150,6 +171,24 @@ export function App() {
     applyValues(nextValues, 1);
   }
 
+  function changeSort(sort: string) {
+    window.clearTimeout(debounceRef.current);
+    const nextValues = { ...valuesRef.current, sort };
+    valuesRef.current = nextValues;
+    setValues(nextValues);
+    applyValues(nextValues, 1);
+  }
+
+  function changeEngine(next: BackendEngine) {
+    setEngine(next);
+    try {
+      window.sessionStorage.setItem(ENGINE_STORAGE_KEY, next);
+    } catch {
+      /* ignore */
+    }
+    setRefreshKey((key) => key + 1);
+  }
+
   function selectListing(listing: Listing) {
     setSelected((current) =>
       current && listingKey(current) === listingKey(listing) ? null : listing,
@@ -167,7 +206,7 @@ export function App() {
 
   return (
     <div className="page">
-      <SiteHeader />
+      <SiteHeader engine={engine} onEngineChange={changeEngine} />
       <main>
         <section className="hero">
           <div className="hero__copy">
@@ -208,17 +247,32 @@ export function App() {
                 <p>Set a budget and search.</p>
               )}
             </div>
-            <label className="page-size">
-              Show
-              <select
-                value={values.pageSize}
-                onChange={(event) => changePageSize(event.target.value)}
-              >
-                <option value="5">5</option>
-                <option value="10">10</option>
-                <option value="20">20</option>
-              </select>
-            </label>
+            <div className="results__tools">
+              <label className="toolbar-control">
+                Sort
+                <select
+                  value={values.sort}
+                  onChange={(event) => changeSort(event.target.value)}
+                >
+                  {SORT_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="toolbar-control">
+                Show
+                <select
+                  value={values.pageSize}
+                  onChange={(event) => changePageSize(event.target.value)}
+                >
+                  <option value="5">5</option>
+                  <option value="10">10</option>
+                  <option value="20">20</option>
+                </select>
+              </label>
+            </div>
           </div>
 
           <div className={selected ? 'results__split' : undefined}>

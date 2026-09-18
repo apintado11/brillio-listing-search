@@ -15,6 +15,7 @@ describe('validateSearchQuery', () => {
       targetBudget: 450000,
       page: 1,
       pageSize: 5,
+      sort: 'match',
     });
   });
 
@@ -107,5 +108,31 @@ describe('validateSearchQuery', () => {
     });
     assert.equal(result.ok, false);
     assert.ok(result.details.includes('city must be at most 80 characters'));
+  });
+
+  it('defaults sort to match and accepts allowed values', () => {
+    const defaults = validateSearchQuery({ targetBudget: '450000' });
+    assert.equal(defaults.ok, true);
+    assert.equal(defaults.value.sort, 'match');
+
+    const newest = validateSearchQuery({
+      targetBudget: '450000',
+      sort: 'newest',
+    });
+    assert.equal(newest.ok, true);
+    assert.equal(newest.value.sort, 'newest');
+  });
+
+  it('rejects an unknown sort', () => {
+    const result = validateSearchQuery({
+      targetBudget: '450000',
+      sort: 'popularity',
+    });
+    assert.equal(result.ok, false);
+    assert.ok(
+      result.details.includes(
+        'sort must be one of match, priceAsc, priceDesc, newest, bedsDesc',
+      ),
+    );
   });
 });

@@ -8,6 +8,10 @@ export default defineConfig({
     proxy: {
       '/api': 'http://127.0.0.1:3001',
       '/health': 'http://127.0.0.1:3001',
+      '/python': {
+        target: 'http://127.0.0.1:3002',
+        rewrite: (path) => path.replace(/^\/python/, '') || '/',
+      },
     },
   },
 });

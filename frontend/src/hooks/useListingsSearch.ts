@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { searchListings, ApiError } from '../api/listings';
-import type { SearchParams, SearchResponse } from '../types';
+import type { BackendEngine, SearchParams, SearchResponse } from '../types';
 
 export type SearchState =
   | { status: 'idle' }
@@ -19,6 +19,7 @@ function toResultState(data: SearchResponse): SearchState {
 export function useListingsSearch(
   params: SearchParams | null,
   refreshKey = 0,
+  engine: BackendEngine = 'node',
 ): SearchState {
   const [state, setState] = useState<SearchState>({ status: 'idle' });
   const paramsKey = params ? JSON.stringify(params) : '';
@@ -42,7 +43,7 @@ export function useListingsSearch(
       return { status: 'loading' };
     });
 
-    searchListings(parsed, controller.signal)
+    searchListings(parsed, engine, controller.signal)
       .then((data) => {
         if (controller.signal.aborted) {
           return;
@@ -72,7 +73,7 @@ export function useListingsSearch(
       });
 
     return () => controller.abort();
-  }, [paramsKey, refreshKey]);
+  }, [paramsKey, refreshKey, engine]);
 
   return state;
 }

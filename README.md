@@ -10,11 +10,11 @@ This repo is **private**. The handout asks for individual work and a zip of the 
 - [docs/Instructions.pdf](docs/Instructions.pdf) — take-home addendum
 - [data/sample_listings.json](data/sample_listings.json) — sample listings (JSON file store)
 
-The handout lists Python, Go, or Java for the backend. This implementation uses **Node.js and Express** because that is the stack that can be changed live in the session. The API contract and search logic are language-independent.
+The handout lists Python, Go, or Java for the backend. This repo has two matching APIs: **Node.js/Express** (`backend/`, port 3001) and **Python/Flask** (`backend-python/`, port 3002). The UI header switches between them. The search contract is the same.
 
 ## Backend
 
-Express app in [`backend/`](backend/). Listings live in [`data/sample_listings.json`](data/sample_listings.json) — that file is the database. Reads parse the array; writes (not exposed as HTTP yet) replace the file via a temp file + rename so POST/PUT can be added later without Mongo.
+Express app in [`backend/`](backend/) and a spec-identical Flask app in [`backend-python/`](backend-python/). Listings live in [`data/sample_listings.json`](data/sample_listings.json) — that file is the database. Reads parse the array; writes (not exposed as HTTP yet) replace the file via a temp file + rename so POST/PUT can be added later without Mongo.
 
 Layout (each folder has one job):
 
@@ -33,11 +33,18 @@ npm install
 npm start
 ```
 
-API: `http://localhost:3001`
+```bash
+cd backend-python
+pip install -r requirements.txt
+python src/server.py
+```
+
+API: `http://localhost:3001` (Node) or `http://localhost:3002` (Python)
 
 - `GET /health` — process is up and the listings file is readable (503 if not)
 - `GET /api/listings` — search, rank, paginate
-- Other methods on `/api/listings` — 405
+- `GET /api/cities` — unique city names for the lookup
+- Other methods on `/api/listings` and `/api/cities` — 405
 
 `GET /api/listings` query params: `targetBudget` (required, > 0), `minPrice`, `maxPrice`, `minBedrooms`, `city`, `keyword` (description substring), `page` (default 1), `pageSize` (default 5, max 50).
 
@@ -64,7 +71,13 @@ cd backend
 npm test
 ```
 
-See [backend/TEST.md](backend/TEST.md) for the case list and curl commands.
+```bash
+cd backend-python
+pip install -r requirements.txt
+python -m unittest discover -s tests -v
+```
+
+See [backend/TEST.md](backend/TEST.md) and [backend-python/TEST.md](backend-python/TEST.md) for the case list and curl commands.
 
 ## Frontend
 
@@ -76,12 +89,17 @@ npm start
 ```
 
 ```bash
+cd backend-python
+python src/server.py
+```
+
+```bash
 cd frontend
 npm install
 npm run dev
 ```
 
-Open `http://localhost:5173`. Vite proxies `/api` to `http://localhost:3001`.
+Open `http://localhost:5173`. Vite proxies `/api` to Node on `3001` and `/python` to Flask on `3002`. Use the **Node / Python** switch in the header.
 
 ```bash
 cd frontend
