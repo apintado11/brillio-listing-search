@@ -1,0 +1,17 @@
+{
+  "name": "listing-search-backend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Brillio listing search API (Express + JSON file store)",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test test/**/*.test.js"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "express": "^5.1.0"
+  }
+}

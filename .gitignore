@@ -1,47 +1,8 @@
-# OS
-.DS_Store
-Thumbs.db
-Desktop.ini
-
-# Editors
-.idea/
-.vscode/
-*.swp
-*.swo
-
-# Env / secrets
-.env
-.env.*
-!.env.example
-*.pem
-*.key
-credentials.json
-
-# Node / frontend
 node_modules/
 dist/
-build/
-.next/
+.DS_Store
+*.log
+.env
+.env.*
 coverage/
-
-# Python
-__pycache__/
-.venv/
-venv/
-*.pyc
-.pytest_cache/
-.mypy_cache/
-
-# Go
-bin/
-vendor/
-
-# Java
-target/
-*.class
-.gradle/
-
-# Archives / junk from the original zip
-__MACOSX/
-~$*
-_extract/
+.vite/
